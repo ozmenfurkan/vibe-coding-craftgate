@@ -1,0 +1,373 @@
+---
+description: "Postman collection management and scenario-based API testing standards."
+globs: "*"
+alwaysApply: true
+---
+
+# Postman Collection Management
+
+You must ALWAYS maintain Postman collections synchronized with the API implementation. Every API change requires corresponding Postman updates.
+
+## 🎯 CRITICAL RULES (MUST)
+
+### 1. Scenario-Based Collections (MANDATORY)
+
+**Every Postman collection MUST be organized by business scenarios, NOT by endpoints.**
+
+❌ **WRONG Structure:**
+```
+Payment API/
+├── GET /api/payments
+├── POST /api/payments
+├── DELETE /api/payments
+└── ...
+```
+
+✅ **CORRECT Structure:**
+```
+Payment API/
+├── 📁 Scenario 1: Successful Payment Flow
+│   ├── 1.1 - Create New Payment
+│   ├── 1.2 - Verify Payment Status
+│   └── 1.3 - Get Payment Receipt
+│
+├── 📁 Scenario 2: Payment Failure - Insufficient Funds
+│   ├── 2.1 - Create Payment (Amount > Balance)
+│   └── 2.2 - Verify Failure Response
+│
+├── 📁 Scenario 3: Payment Cancellation
+│   ├── 3.1 - Create Payment
+│   ├── 3.2 - Cancel Payment
+│   └── 3.3 - Verify Cancellation Status
+│
+└── 📁 Setup & Teardown
+    ├── 0.1 - Get Auth Token
+    └── 0.9 - Cleanup Test Data
+```
+
+### 2. Scenario Update Synchronization (MANDATORY)
+
+**When ANY business scenario changes in code:**
+1. ✅ Update the corresponding Postman scenario immediately
+2. ✅ Add/remove requests to match the new flow
+3. ✅ Update test assertions
+4. ✅ Update documentation
+5. ✅ Verify the scenario still works end-to-end
+
+**Example:**
+```
+Code Change: Added email notification step to payment flow
+↓
+Postman Update Required:
+- Add new request: "1.4 - Verify Email Notification Sent"
+- Update scenario description
+- Add assertion for email delivery
+```
+
+### 3. Code Analysis for Postman Updates
+
+**Before implementing ANY code change, analyze:**
+
+#### When Postman Updates ARE Required:
+- ✅ New API endpoint added → Create new scenario
+- ✅ Request/response format changed → Update request body & tests
+- ✅ New validation rule added → Add negative test scenario
+- ✅ Business flow changed → Reorganize scenario steps
+- ✅ New error code introduced → Add failure scenario
+- ✅ Authentication method changed → Update all requests
+- ✅ New query parameter added → Update relevant requests
+
+#### When Postman Updates are NOT Required:
+- ❌ Internal refactoring (no API contract change)
+- ❌ Code formatting changes
+- ❌ Comment updates
+- ❌ Performance optimization (same behavior)
+
+### 4. Collection Organization Standards
+
+**Naming Convention:**
+```
+{Scenario Number} - {Scenario Name}/
+  {Step Number}.{SubStep} - {Action Description}
+```
+
+**Example:**
+```
+1 - Happy Path: User Registration/
+  1.1 - Register New User
+  1.2 - Verify Email
+  1.3 - Login with New Credentials
+  1.4 - Get User Profile
+```
+
+**Numbering Rules:**
+- `0.x` - Setup/Authentication
+- `1.x-9.x` - Main scenarios (ordered by importance)
+- `10.x+` - Edge cases & error scenarios
+- `99.x` - Teardown/Cleanup
+
+## 📋 Request Standards
+
+### Request Naming
+```
+{Step} - {HTTP Method} {Action} [{Expected Result}]
+
+Examples:
+✅ "1.1 - POST Create Payment [Success]"
+✅ "2.1 - POST Create Payment [Fail: Insufficient Funds]"
+✅ "3.2 - GET Verify Payment Status [Pending]"
+```
+
+### Request Description (MUST Include)
+```markdown
+## Purpose
+Brief description of what this request does in the scenario.
+
+## Expected Behavior
+- Status Code: 200
+- Response Time: < 500ms
+- Business Rule: Payment status should be "PENDING"
+
+## Test Data
+- Card Number: {{test_card_success}}
+- Amount: {{test_amount_valid}}
+
+## Dependencies
+- Requires: 1.1 - POST Create Payment
+- Sets Variables: {{payment_id}}
+```
+
+## ✅ Test Scripts (MANDATORY)
+
+**Every request MUST have test scripts:**
+
+### Basic Tests (Minimum Required)
+```javascript
+// Status code validation
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+// Response time validation
+pm.test("Response time is less than 500ms", function () {
+    pm.expect(pm.response.responseTime).to.be.below(500);
+});
+
+// Response structure validation
+pm.test("Response has required fields", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('success');
+    pm.expect(jsonData).to.have.property('data');
+});
+```
+
+### Business Logic Tests (Scenario-Specific)
+```javascript
+// Validate business rules
+pm.test("Payment amount matches request", function () {
+    var jsonData = pm.response.json();
+    var requestData = JSON.parse(pm.request.body.raw);
+    pm.expect(jsonData.data.amount).to.eql(requestData.amount);
+});
+
+// Set variables for next requests
+pm.test("Save payment ID for next step", function () {
+    var jsonData = pm.response.json();
+    pm.collectionVariables.set("payment_id", jsonData.data.id);
+});
+```
+
+### Security Tests (FinTech MUST)
+```javascript
+// Ensure no sensitive data in logs
+pm.test("Response does not contain PAN", function () {
+    var responseText = pm.response.text();
+    // PAN pattern check (should be masked)
+    pm.expect(responseText).to.not.match(/\d{16}/);
+});
+
+// Validate response headers
+pm.test("Security headers present", function () {
+    pm.response.to.have.header("X-Content-Type-Options");
+    pm.response.to.have.header("X-Frame-Options");
+});
+```
+
+## 🔐 Environment Variables
+
+**Structure:**
+```
+{{base_url}}          - API base URL
+{{api_version}}       - /v1, /v2, etc.
+{{auth_token}}        - JWT token (auto-refreshed)
+
+# Test Data
+{{test_card_success}}    - Valid test card
+{{test_card_decline}}    - Declining test card
+{{test_amount_valid}}    - Valid amount (e.g., 10.00)
+{{test_amount_invalid}}  - Invalid amount (e.g., 0.01)
+
+# Dynamic Variables (set by tests)
+{{payment_id}}           - Current payment ID
+{{transaction_id}}       - Current transaction ID
+{{user_id}}             - Current user ID
+```
+
+**NEVER hardcode:**
+- ❌ URLs (use `{{base_url}}`)
+- ❌ Credentials (use environment variables)
+- ❌ Test card numbers (use `{{test_card_*}}`)
+- ❌ Merchant IDs (use `{{merchant_id}}`)
+
+## 📁 Collection Structure Template
+
+```
+{Project Name} API/
+│
+├── 📁 0 - Setup & Authentication
+│   ├── 0.1 - Health Check
+│   ├── 0.2 - Get Auth Token
+│   └── 0.3 - Verify Token
+│
+├── 📁 1 - Happy Path: {Main Scenario}
+│   ├── 1.1 - {First Step}
+│   ├── 1.2 - {Second Step}
+│   └── 1.x - {Final Step}
+│
+├── 📁 2 - Alternative Flow: {Variant Scenario}
+│   └── ...
+│
+├── 📁 10 - Error Scenarios
+│   ├── 10.1 - Invalid Input
+│   ├── 10.2 - Unauthorized Access
+│   └── 10.x - ...
+│
+└── 📁 99 - Cleanup
+    └── 99.1 - Delete Test Data
+```
+
+## 🔄 Synchronization Workflow
+
+### When Adding New Endpoint:
+```
+1. ✅ Implement endpoint in backend
+2. ✅ Identify which scenario(s) it belongs to
+3. ✅ Add request to appropriate scenario folder
+4. ✅ Write comprehensive tests
+5. ✅ Update collection documentation
+6. ✅ Test the entire scenario end-to-end
+```
+
+### When Modifying Endpoint:
+```
+1. ✅ Update request body/headers
+2. ✅ Update response validation tests
+3. ✅ Check if scenario flow changed
+4. ✅ Update documentation
+5. ✅ Re-run scenario to verify
+```
+
+### When Removing Endpoint:
+```
+1. ✅ Remove from Postman collection
+2. ✅ Check if scenario is still complete
+3. ✅ Update scenario documentation
+4. ✅ Archive old version (for reference)
+```
+
+## 📝 Documentation Standards
+
+**Collection Description (MUST):**
+```markdown
+# {Project Name} API Collection
+
+## Purpose
+Brief description of what this API does.
+
+## Base URL
+- Production: https://api.production.com
+- Staging: https://api.staging.com
+- Local: http://localhost:8080
+
+## Authentication
+- Type: Bearer Token / API Key
+- How to obtain: Run "0.2 - Get Auth Token"
+
+## Test Data
+List of available test cards, users, etc.
+
+## Scenarios Overview
+1. Happy Path: Main user journey
+2. Error Cases: Common failure scenarios
+...
+
+## Version
+- API Version: v1.0.0
+- Collection Version: 1.0.0
+- Last Updated: 2024-01-15
+```
+
+## 🎯 Quality Checklist
+
+Before considering Postman collection complete:
+
+- [ ] All scenarios are organized by business flow (NOT by endpoint)
+- [ ] Every request has a clear purpose in its scenario
+- [ ] All requests have test scripts
+- [ ] All sensitive data uses environment variables
+- [ ] Response validation checks business rules
+- [ ] Error scenarios are covered
+- [ ] Collection documentation is up-to-date
+- [ ] Scenarios can run independently
+- [ ] No hardcoded values (URLs, credentials, test data)
+- [ ] Security tests verify no PII in responses
+
+## 🚨 Common Mistakes to Avoid
+
+### ❌ Endpoint-Based Organization
+```
+# WRONG - Organized by HTTP methods
+GET Requests/
+  Get Payment
+  Get Transaction
+POST Requests/
+  Create Payment
+  Create Transaction
+```
+
+### ✅ Scenario-Based Organization
+```
+# CORRECT - Organized by business scenarios
+Complete Payment Flow/
+  1.1 - Create Payment
+  1.2 - Process Transaction
+  1.3 - Get Receipt
+```
+
+### ❌ Missing Context
+```
+# WRONG - No context
+Request Name: "Create Payment"
+```
+
+### ✅ Clear Context
+```
+# CORRECT - Clear scenario context
+Request Name: "1.1 - Create Payment [Success - Happy Path]"
+Description: "First step in successful payment scenario..."
+```
+
+## 🔗 Integration with Development
+
+**When reviewing code changes, ALWAYS check:**
+1. Does this change affect API contract? → Update Postman
+2. Is there a new business scenario? → Create new folder
+3. Are there new validation rules? → Add test scenarios
+4. Did error handling change? → Update error scenarios
+
+**Postman collection is NOT optional documentation.**
+**It is a LIVING, EXECUTABLE specification of your API.**
+
+---
+
+**Scenario-based testing ensures business flows work, not just individual endpoints.** 🎯
