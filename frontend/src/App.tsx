@@ -18,6 +18,7 @@ function App() {
         <PaymentForm 
           defaultAmount={100}
           defaultCurrency="TRY"
+          defaultProvider="CRAFTGATE"
           defaultBuyerId="buyer-demo-123"
         />
 
