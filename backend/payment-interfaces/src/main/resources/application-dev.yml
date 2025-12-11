@@ -19,9 +19,32 @@ akbank:
   store-key: "test-store-key"
   api-url: "https://sanalpos-test.akbank.com.tr/fim/api"  # Test endpoint
 
+# Masterpass Dev Configuration
+# NOTE: Sandbox requires VPN connection (Confluence doc)
+# Test OTP: 123456 for all verifications
+masterpass:
+  enabled: true
+  base-url: https://sandbox-api.craftgate.io
+  version: v2
+  # Test bilgileri Confluence'da mevcut
+  # Test kartları: Her bankanın test POS'u ile eşleşmeli
+
+# Shopify Dev Configuration
+# Test webhook'ları için ngrok veya local tunnel kullanılabilir
+# ngrok http 8080 → https://xxx.ngrok.io → Shopify webhook URL
+shopify:
+  enabled: true
+  # Test için dummy secret (gerçek secret .env'de olmalı)
+  webhook-secret: ${SHOPIFY_WEBHOOK_SECRET:dev-webhook-secret-change-in-production}
+  shop-domain: ${SHOPIFY_SHOP_DOMAIN:dev-store.myshopify.com}
+  api-version: 2024-01
+
 logging:
   level:
     com.dumensel.payment: DEBUG
     org.springframework.web: DEBUG
     com.dumensel.payment.infrastructure.gateway: TRACE  # Gateway debug
+    com.dumensel.payment.infrastructure.gateway.masterpass: TRACE  # Masterpass debug
+    com.dumensel.payment.infrastructure.webhook: DEBUG  # Shopify webhook debug
+    com.dumensel.payment.interfaces.rest.ShopifyWebhookController: DEBUG
 

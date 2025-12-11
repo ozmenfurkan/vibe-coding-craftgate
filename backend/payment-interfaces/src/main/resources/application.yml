@@ -53,6 +53,37 @@ akbank:
   failure-url: ${AKBANK_FAILURE_URL:https://yourdomain.com/payment/failure}
   callback-url: ${AKBANK_CALLBACK_URL:https://yourdomain.com/payment/callback}
 
+# Masterpass Configuration (V2)
+# Confluence: Masterpass Integration
+# - V2 uses Craftgate as intermediary (server-side only)
+# - Client SDK handles UI, token must come from Craftgate
+# - Supports YKB and Garanti for loyalty (separate endpoint)
+# - Test OTP: 123456 (all OTP verifications)
+# - Requires VPN for sandbox testing
+masterpass:
+  enabled: ${MASTERPASS_ENABLED:true}
+  api-key: ${MASTERPASS_API_KEY:${craftgate.api-key}}
+  secret-key: ${MASTERPASS_SECRET_KEY:${craftgate.secret-key}}
+  base-url: ${MASTERPASS_BASE_URL:https://sandbox-api.craftgate.io}
+  # Integration version (v1=CPP, v2=API)
+  version: ${MASTERPASS_VERSION:v2}
+  # IP Whitelist (Production only - Confluence doc)
+  # Required IPs: 185.188.37.1, 212.2.217.54, 195.33.224.194
+
+# Shopify Webhook Configuration
+# Shopify store'dan gelen order webhook'larını işlemek için
+# CRITICAL: webhook-secret MUTLAKA .env'den alınmalı (HMAC validation için)
+shopify:
+  enabled: ${SHOPIFY_ENABLED:true}
+  webhook-secret: ${SHOPIFY_WEBHOOK_SECRET}
+  shop-domain: ${SHOPIFY_SHOP_DOMAIN:yourstore.myshopify.com}
+  # API version compatibility (Shopify Admin API)
+  api-version: ${SHOPIFY_API_VERSION:2024-01}
+  # Webhook retry policy (Shopify retries failed webhooks)
+  retry:
+    max-attempts: 3
+    backoff-ms: 1000
+
 # Logging Configuration
 logging:
   level:

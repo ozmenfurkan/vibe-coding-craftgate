@@ -6,7 +6,8 @@ package com.dumensel.payment.domain.model;
  */
 public enum PaymentProvider {
     CRAFTGATE("Craftgate", "Turkish payment gateway"),
-    AKBANK("Akbank Sanal POS", "Turkish bank virtual POS");
+    AKBANK("Akbank Sanal POS", "Turkish bank virtual POS"),
+    MASTERPASS("Masterpass", "Mastercard digital wallet and card storage");
 
     private final String displayName;
     private final String description;
