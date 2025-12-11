@@ -1,0 +1,27 @@
+# Development Profile
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payment_db_dev
+    username: postgres
+    password: postgres
+  
+  jpa:
+    hibernate:
+      ddl-auto: update # Dev'de update kullanılabilir
+    show-sql: true
+
+craftgate:
+  base-url: https://sandbox-api.craftgate.io
+
+akbank:
+  enabled: false  # Dev'de disabled (test için true yapılabilir)
+  client-id: "test-client-id"
+  store-key: "test-store-key"
+  api-url: "https://sanalpos-test.akbank.com.tr/fim/api"  # Test endpoint
+
+logging:
+  level:
+    com.dumensel.payment: DEBUG
+    org.springframework.web: DEBUG
+    com.dumensel.payment.infrastructure.gateway: TRACE  # Gateway debug
+

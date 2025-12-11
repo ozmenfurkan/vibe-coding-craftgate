@@ -1,0 +1,44 @@
+version: '3.8'
+
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: payment-db
+    environment:
+      POSTGRES_DB: payment_db_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - payment-network
+
+  # Payment Service (optional)
+  payment-service:
+    build: .
+    container_name: payment-service
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DATABASE_URL: jdbc:postgresql://postgres:5432/payment_db_dev
+      CRAFTGATE_API_KEY: ${CRAFTGATE_API_KEY}
+      CRAFTGATE_SECRET_KEY: ${CRAFTGATE_SECRET_KEY}
+    ports:
+      - "8080:8080"
+    networks:
+      - payment-network
+
+volumes:
+  postgres_data:
+
+networks:
+  payment-network:
+    driver: bridge
+

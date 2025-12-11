@@ -1,0 +1,40 @@
+# Production Profile
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate # Production'da sadece validate
+    show-sql: false
+
+craftgate:
+  api-key: ${CRAFTGATE_API_KEY}
+  secret-key: ${CRAFTGATE_SECRET_KEY}
+  base-url: https://api.craftgate.io # Production URL
+
+akbank:
+  enabled: ${AKBANK_ENABLED:true}  # Production'da enabled
+  client-id: ${AKBANK_CLIENT_ID}
+  store-key: ${AKBANK_STORE_KEY}
+  api-url: https://sanalpos.akbank.com.tr/fim/api  # Production endpoint
+  success-url: ${AKBANK_SUCCESS_URL}
+  failure-url: ${AKBANK_FAILURE_URL}
+  callback-url: ${AKBANK_CALLBACK_URL}
+
+logging:
+  level:
+    root: WARN
+    com.dumensel.payment: INFO
+    org.hibernate.SQL: WARN
+    com.dumensel.payment.infrastructure.gateway: INFO
+
+server:
+  error:
+    include-stacktrace: never
+    include-exception: false
+
