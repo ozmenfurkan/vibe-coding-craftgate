@@ -232,6 +232,27 @@ Frontend:
   - Currency formatting with Intl API
 ```
 
+## 🎯 Multi-Gateway Support
+
+### Supported Payment Providers
+
+- ✅ **Craftgate** - Turkish payment gateway
+- ✅ **Akbank Sanal POS** - Real bank integration with 3D Secure
+- ➕ Easy to add more!
+
+### Example: Payment with Akbank
+
+```bash
+curl -X POST http://localhost:8080/api/v1/payments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "AKBANK",
+    "amount": 100.50,
+    "currency": "TRY",
+    ...
+  }'
+```
+
 ## 🏭 Production Deployment
 
 ### Backend
@@ -241,7 +262,7 @@ Frontend:
 mvn clean package -DskipTests
 
 # Run with production profile
-java -jar target/payment-service.jar --spring.profiles.active=prod
+java -jar payment-interfaces/target/payment-interfaces-1.0.0-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
 ### Frontend
