@@ -1,0 +1,880 @@
+# Backend Testing Strategy - Unit, Integration & Functional Tests
+
+## 🎯 CRITICAL RULES (MUST)
+
+**EVERY backend feature MUST have comprehensive tests:**
+- ✅ **Unit Tests (UT)**: Domain logic, business rules
+- ✅ **Integration Tests (IT)**: Repository, database, external APIs
+- ✅ **Functional Tests (FT)**: End-to-end API tests with TestContainers
+
+**Test coverage MUST be at least 80% for new code.**
+
+## 📦 Test Structure in Multi-Module Maven
+
+```
+backend/
+├── {project}-domain/
+│   └── src/test/java/
+│       └── com.company.{project}.domain/
+│           ├── model/
+│           │   └── PaymentTest.java          # Unit tests
+│           └── ...
+│
+├── {project}-application/
+│   └── src/test/java/
+│       └── com.company.{project}.application/
+│           └── service/
+│               └── PaymentServiceTest.java   # Unit + Integration tests
+│
+├── {project}-infrastructure/
+│   └── src/test/java/
+│       └── com.company.{project}.infrastructure/
+│           └── persistence/
+│               └── JpaPaymentRepositoryIT.java  # Integration tests
+│
+└── {project}-interfaces/
+    └── src/test/java/
+        └── com.company.{project}.interfaces/
+            └── rest/
+                └── PaymentControllerFT.java    # Functional tests
+```
+
+## 🧪 Test Types & Naming Conventions
+
+### 1. Unit Tests (UT)
+**Naming:** `{ClassName}Test.java`  
+**Suffix:** `Test`  
+**Purpose:** Test single class in isolation, no external dependencies
+
+**Example:** `PaymentTest.java`, `MoneyTest.java`
+
+### 2. Integration Tests (IT)
+**Naming:** `{ClassName}IT.java`  
+**Suffix:** `IT`  
+**Purpose:** Test integration with databases, message queues, etc.
+
+**Example:** `JpaPaymentRepositoryIT.java`, `PaymentServiceIT.java`
+
+### 3. Functional Tests (FT)
+**Naming:** `{ClassName}FT.java`  
+**Suffix:** `FT`  
+**Purpose:** End-to-end API tests, full application context
+
+**Example:** `PaymentControllerFT.java`, `UserPointsControllerFT.java`
+
+## 🔧 Test Dependencies (pom.xml)
+
+### Parent POM - Common Test Dependencies
+```xml
+<dependencyManagement>
+    <dependencies>
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- AssertJ - Fluent assertions -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.24.2</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.8.0</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Mockito JUnit Jupiter -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.8.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+### Domain Module - Pure Unit Tests
+```xml
+<dependencies>
+    <!-- NO external dependencies in production code -->
+    <!-- Only test dependencies -->
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+### Application Module - Unit + Mocked Integration Tests
+```xml
+<dependencies>
+    <!-- Production dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    
+    <!-- Test dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-junit-jupiter</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+### Infrastructure Module - Real Integration Tests
+```xml
+<dependencies>
+    <!-- Production dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+    </dependency>
+    
+    <!-- Test dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    
+    <!-- TestContainers for real DB tests -->
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers</artifactId>
+        <version>1.19.3</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>1.19.3</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>1.19.3</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+### Interfaces Module - Functional/E2E Tests
+```xml
+<dependencies>
+    <!-- All other modules -->
+    
+    <!-- Test dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    
+    <!-- REST Assured for API testing -->
+    <dependency>
+        <groupId>io.rest-assured</groupId>
+        <artifactId>rest-assured</artifactId>
+        <version>5.4.0</version>
+        <scope>test</scope>
+    </dependency>
+    
+    <!-- TestContainers -->
+    <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+## 📝 Test Templates & Best Practices
+
+### 1. Unit Test Template (Domain Layer)
+
+```java
+package com.company.project.domain.model;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import static org.assertj.core.api.Assertions.*;
+import java.math.BigDecimal;
+
+@DisplayName("Payment Domain Tests")
+class PaymentTest {
+    
+    @Nested
+    @DisplayName("Payment Creation")
+    class PaymentCreation {
+        
+        @Test
+        @DisplayName("Should create payment with valid data")
+        void shouldCreatePaymentWithValidData() {
+            // Given
+            Money amount = new Money(new BigDecimal("100.00"), Currency.TRY);
+            
+            // When
+            Payment payment = new Payment(
+                "conv-123",
+                amount,
+                paymentMethod,
+                PaymentProvider.CRAFTGATE,
+                "buyer-123"
+            );
+            
+            // Then
+            assertThat(payment.getId()).isNotNull();
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+            assertThat(payment.getAmount()).isEqualTo(amount);
+        }
+        
+        @Test
+        @DisplayName("Should throw exception for null amount")
+        void shouldThrowExceptionForNullAmount() {
+            // Given & When & Then
+            assertThatThrownBy(() -> 
+                new Payment("conv-123", null, paymentMethod, provider, "buyer-123")
+            )
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Amount cannot be null");
+        }
+    }
+    
+    @Nested
+    @DisplayName("Business Logic")
+    class BusinessLogic {
+        
+        @Test
+        @DisplayName("Should mark payment as success")
+        void shouldMarkPaymentAsSuccess() {
+            // Given
+            Payment payment = createValidPayment();
+            
+            // When
+            payment.markAsSuccess("external-123");
+            
+            // Then
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
+            assertThat(payment.getExternalPaymentId()).isEqualTo("external-123");
+        }
+        
+        @Test
+        @DisplayName("Should not allow success payment to fail")
+        void shouldNotAllowSuccessPaymentToFail() {
+            // Given
+            Payment payment = createValidPayment();
+            payment.markAsSuccess("external-123");
+            
+            // When & Then
+            assertThatThrownBy(() -> 
+                payment.markAsFailed("ERR001", "Error message")
+            )
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Cannot fail a successful payment");
+        }
+    }
+}
+```
+
+### 2. Integration Test Template (Infrastructure Layer)
+
+```java
+package com.company.project.infrastructure.persistence;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import static org.assertj.core.api.Assertions.*;
+
+@DataJpaTest
+@Testcontainers
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@DisplayName("JPA Payment Repository Integration Tests")
+class JpaPaymentRepositoryIT {
+    
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:14")
+        .withDatabaseName("test")
+        .withUsername("test")
+        .withPassword("test");
+    
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+    }
+    
+    @Autowired
+    private SpringDataPaymentRepository repository;
+    
+    @Autowired
+    private PaymentMapper mapper;
+    
+    @Test
+    @DisplayName("Should save and find payment by ID")
+    void shouldSaveAndFindPaymentById() {
+        // Given
+        Payment payment = createValidPayment();
+        PaymentEntity entity = mapper.toEntity(payment);
+        
+        // When
+        PaymentEntity savedEntity = repository.save(entity);
+        PaymentEntity foundEntity = repository.findById(savedEntity.getId()).orElseThrow();
+        
+        // Then
+        assertThat(foundEntity.getId()).isEqualTo(savedEntity.getId());
+        assertThat(foundEntity.getAmount()).isEqualByComparingTo(payment.getAmount().getAmount());
+        assertThat(foundEntity.getStatus()).isEqualTo(payment.getStatus().name());
+    }
+    
+    @Test
+    @DisplayName("Should find payment by conversation ID")
+    void shouldFindPaymentByConversationId() {
+        // Given
+        Payment payment = createValidPayment();
+        PaymentEntity entity = mapper.toEntity(payment);
+        repository.save(entity);
+        
+        // When
+        Optional<PaymentEntity> found = repository.findByConversationId(payment.getConversationId());
+        
+        // Then
+        assertThat(found).isPresent();
+        assertThat(found.get().getConversationId()).isEqualTo(payment.getConversationId());
+    }
+    
+    private Payment createValidPayment() {
+        return new Payment(
+            "conv-" + UUID.randomUUID(),
+            new Money(new BigDecimal("100.00"), Currency.TRY),
+            createPaymentMethod(),
+            PaymentProvider.CRAFTGATE,
+            "buyer-123"
+        );
+    }
+}
+```
+
+### 3. Functional Test Template (Interfaces Layer)
+
+```java
+package com.company.project.interfaces.rest;
+
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Testcontainers
+@DisplayName("Payment Controller Functional Tests")
+class PaymentControllerFT {
+    
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:14")
+        .withDatabaseName("test")
+        .withUsername("test")
+        .withPassword("test");
+    
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+    }
+    
+    @LocalServerPort
+    private int port;
+    
+    @BeforeEach
+    void setUp() {
+        RestAssured.port = port;
+        RestAssured.basePath = "/api/v1";
+    }
+    
+    @Test
+    @DisplayName("Should create payment successfully")
+    void shouldCreatePaymentSuccessfully() {
+        // Given
+        String requestBody = """
+            {
+              "conversationId": "ORDER-12345",
+              "amount": 100.50,
+              "currency": "TRY",
+              "buyerId": "buyer-123",
+              "provider": "CRAFTGATE",
+              "cardInfo": {
+                "cardHolderName": "JOHN DOE",
+                "cardNumber": "5400010000000004",
+                "expireMonth": "12",
+                "expireYear": "2030",
+                "cvv": "123"
+              }
+            }
+            """;
+        
+        // When & Then
+        given()
+            .contentType(ContentType.JSON)
+            .header("Idempotency-Key", "unique-key-123")
+            .body(requestBody)
+        .when()
+            .post("/payments")
+        .then()
+            .statusCode(201)
+            .body("conversationId", equalTo("ORDER-12345"))
+            .body("amount", equalTo(100.50f))
+            .body("status", equalTo("SUCCESS"))
+            .body("id", notNullValue())
+            .body("externalPaymentId", notNullValue());
+    }
+    
+    @Test
+    @DisplayName("Should return 400 for invalid card number")
+    void shouldReturn400ForInvalidCardNumber() {
+        // Given
+        String requestBody = """
+            {
+              "conversationId": "ORDER-12345",
+              "amount": 100.50,
+              "currency": "TRY",
+              "buyerId": "buyer-123",
+              "provider": "CRAFTGATE",
+              "cardInfo": {
+                "cardHolderName": "JOHN DOE",
+                "cardNumber": "1234",
+                "expireMonth": "12",
+                "expireYear": "2030",
+                "cvv": "123"
+              }
+            }
+            """;
+        
+        // When & Then
+        given()
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+        .when()
+            .post("/payments")
+        .then()
+            .statusCode(400)
+            .body("title", equalTo("Validation Error"));
+    }
+    
+    @Test
+    @DisplayName("Should get payment by ID")
+    void shouldGetPaymentById() {
+        // Given - First create a payment
+        String paymentId = createPayment();
+        
+        // When & Then
+        given()
+        .when()
+            .get("/payments/" + paymentId)
+        .then()
+            .statusCode(200)
+            .body("id", equalTo(paymentId))
+            .body("status", notNullValue());
+    }
+}
+```
+
+## 🎯 Test Scenarios by Layer
+
+### Domain Layer Tests (Unit Tests)
+
+**MUST test:**
+- ✅ Object creation with valid data
+- ✅ Object creation with invalid data (exceptions)
+- ✅ All business methods (happy path)
+- ✅ Business rule violations (exceptions)
+- ✅ Edge cases (boundaries, null values)
+- ✅ Immutability (for Value Objects)
+
+**Example scenarios for Payment:**
+```java
+// Creation
+- Should create payment with valid data
+- Should throw exception for null amount
+- Should throw exception for negative amount
+- Should generate unique ID
+- Should set status to PENDING initially
+
+// Business logic
+- Should mark payment as success
+- Should mark payment as failed
+- Should not allow failed payment to succeed
+- Should not allow success payment to fail
+- Should cancel pending payment
+- Should not cancel success payment
+```
+
+### Application Layer Tests (Unit + Integration)
+
+**MUST test:**
+- ✅ Use case orchestration
+- ✅ DTO <-> Domain mapping
+- ✅ Transaction boundaries
+- ✅ Exception handling
+- ✅ Mocked repository interactions
+
+**Example scenarios for PaymentService:**
+```java
+// Happy path
+- Should create payment successfully
+- Should retrieve payment by ID
+- Should find payment by conversation ID
+
+// Idempotency
+- Should return existing payment for duplicate conversation ID
+- Should not create duplicate payment
+
+// Error handling
+- Should throw PaymentNotFoundException for invalid ID
+- Should handle gateway exceptions
+- Should save failed payment to database
+```
+
+### Infrastructure Layer Tests (Integration Tests)
+
+**MUST test with TestContainers:**
+- ✅ Database operations (CRUD)
+- ✅ Custom queries
+- ✅ Transaction rollback
+- ✅ Entity <-> Domain mapping
+- ✅ Database constraints
+- ✅ Migrations (Flyway)
+
+**Example scenarios for JpaPaymentRepository:**
+```java
+// CRUD operations
+- Should save payment to database
+- Should find payment by ID
+- Should find payment by conversation ID
+- Should update payment status
+- Should delete payment
+
+// Custom queries
+- Should find payments by buyer ID
+- Should find payments by date range
+- Should find payments by status
+
+// Constraints
+- Should enforce unique conversation ID
+- Should not allow null required fields
+```
+
+### Interfaces Layer Tests (Functional Tests)
+
+**MUST test with full Spring context:**
+- ✅ HTTP endpoints (all methods)
+- ✅ Request validation
+- ✅ Response status codes
+- ✅ Response body structure
+- ✅ Error responses (RFC 7807)
+- ✅ Authentication/Authorization
+- ✅ Idempotency headers
+
+**Example scenarios for PaymentController:**
+```java
+// Happy path
+- Should create payment and return 201
+- Should get payment by ID and return 200
+- Should handle idempotency key
+
+// Validation
+- Should return 400 for invalid card
+- Should return 400 for missing fields
+- Should return 400 for negative amount
+
+// Error handling
+- Should return 404 for non-existent payment
+- Should return 502 for gateway error
+- Should return proper error structure (RFC 7807)
+
+// Security
+- Should not log sensitive data
+- Should mask card numbers in response
+```
+
+## 🔒 Security Testing Rules
+
+### MUST Verify in Tests:
+
+```java
+@Test
+@DisplayName("Should not log sensitive data")
+void shouldNotLogSensitiveData() {
+    // Capture logs
+    ListAppender<ILoggingEvent> logWatcher = new ListAppender<>();
+    logWatcher.start();
+    ((Logger) LoggerFactory.getLogger(PaymentController.class)).addAppender(logWatcher);
+    
+    // Trigger action that logs
+    createPayment();
+    
+    // Verify no PAN in logs
+    List<ILoggingEvent> logsList = logWatcher.list;
+    assertThat(logsList)
+        .noneMatch(log -> log.getFormattedMessage().matches(".*\\d{16}.*"))
+        .as("Logs should not contain 16-digit card numbers");
+}
+
+@Test
+@DisplayName("Should mask card number in error response")
+void shouldMaskCardNumberInErrorResponse() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(createInvalidPaymentRequest())
+    .when()
+        .post("/payments")
+    .then()
+        .statusCode(400)
+        .body(not(containsString("5400010000000004")))
+        .as("Error response should not contain full card number");
+}
+```
+
+## 📊 Test Coverage Requirements
+
+### Minimum Coverage (per module):
+- **Domain:** 95% (critical business logic)
+- **Application:** 85% (use cases)
+- **Infrastructure:** 80% (data access)
+- **Interfaces:** 75% (controllers)
+
+### Maven Configuration:
+```xml
+<plugin>
+    <groupId>org.jacoco</groupId>
+    <artifactId>jacoco-maven-plugin</artifactId>
+    <version>0.8.11</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>prepare-agent</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+                <goal>report</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>jacoco-check</id>
+            <phase>verify</phase>
+            <goals>
+                <goal>check</goal>
+            </goals>
+            <configuration>
+                <rules>
+                    <rule>
+                        <element>PACKAGE</element>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.80</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                </rules>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+## 🚀 Running Tests
+
+### Run all tests:
+```bash
+mvn clean test
+```
+
+### Run specific test type:
+```bash
+# Unit tests only (fast)
+mvn test -Dtest="*Test"
+
+# Integration tests only
+mvn test -Dtest="*IT"
+
+# Functional tests only
+mvn test -Dtest="*FT"
+```
+
+### Run with coverage:
+```bash
+mvn clean verify
+# Report: target/site/jacoco/index.html
+```
+
+### Run in specific module:
+```bash
+mvn test -pl payment-domain
+mvn test -pl payment-infrastructure
+```
+
+## 📋 Test Checklist
+
+Before pushing code, verify:
+
+- [ ] All Unit Tests pass (Domain layer)
+- [ ] All Integration Tests pass (Infrastructure layer)
+- [ ] All Functional Tests pass (Interfaces layer)
+- [ ] Test coverage >= 80%
+- [ ] No sensitive data in test logs
+- [ ] TestContainers used for real DB/external services
+- [ ] Test names clearly describe scenarios
+- [ ] Assertions use AssertJ fluent API
+- [ ] @DisplayName used for readable test reports
+- [ ] Edge cases covered
+- [ ] Negative scenarios tested
+
+## ❌ Common Mistakes to Avoid
+
+### DON'T:
+```java
+// ❌ Testing implementation details
+@Test
+void shouldCallRepositorySaveMethod() {
+    service.createPayment(request);
+    verify(repository).save(any()); // WRONG!
+}
+
+// ❌ Using real database without TestContainers
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = Replace.ANY) // WRONG!
+
+// ❌ Not testing business rules
+@Test
+void shouldMarkAsSuccess() {
+    payment.markAsSuccess("id");
+    // No assertions! WRONG!
+}
+
+// ❌ Ignoring exceptions
+@Test
+void shouldThrowException() {
+    try {
+        payment.markAsSuccess(null);
+    } catch (Exception e) {
+        // Ignored! WRONG!
+    }
+}
+```
+
+### DO:
+```java
+// ✅ Test behavior, not implementation
+@Test
+void shouldCreatePaymentAndReturnSuccess() {
+    PaymentResponse response = service.createPayment(request);
+    assertThat(response.getStatus()).isEqualTo("SUCCESS");
+}
+
+// ✅ Use TestContainers for real DB
+@DataJpaTest
+@Testcontainers
+@AutoConfigureTestDatabase(replace = Replace.NONE)
+
+// ✅ Always verify business rules
+@Test
+void shouldEnforcePaymentLimit() {
+    assertThatThrownBy(() -> payment.setAmount(tooMuch))
+        .isInstanceOf(PaymentLimitExceededException.class)
+        .hasMessageContaining("exceeds limit");
+}
+
+// ✅ Use assertThatThrownBy
+@Test
+void shouldThrowExceptionForNullId() {
+    assertThatThrownBy(() -> payment.markAsSuccess(null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("ID cannot be null");
+}
+```
+
+## 🎯 Summary
+
+**Test Philosophy:**
+- Unit Tests: Fast, isolated, no external dependencies
+- Integration Tests: Real database, TestContainers, slower
+- Functional Tests: Full application, E2E, slowest
+
+**Test Pyramid:**
+```
+     /\
+    /FT\     <- Few (expensive, slow)
+   /----\
+  / IT  \    <- Some (moderate)
+ /------\
+/  UT   \   <- Many (cheap, fast)
+---------
+```
+
+**Remember:**
+- Tests are documentation
+- Tests are safety net for refactoring
+- Tests catch bugs before production
+- Tests enforce business rules
+
+**NEVER skip tests for "speed". Bugs in production are far more expensive than writing tests.**
+
+---
+
+**DDD Compliance:** ✅  
+**Security Rules:** ✅  
+**TestContainers:** ✅  
+**Coverage >= 80%:** ✅

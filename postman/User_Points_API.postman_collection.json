@@ -1,0 +1,577 @@
+{
+  "info": {
+    "name": "User Points API",
+    "_postman_id": "user-points-api-v1",
+    "description": "# User Points API Collection\n\n## Purpose\nKullanıcı puan yönetim sistemi - puan kazanma, harcama ve sorgulama\n\n## Base URL\n- Production: https://api.production.com\n- Staging: https://api.staging.com\n- Local: http://localhost:8080\n\n## Authentication\n- Type: Bearer Token / API Key\n- Header: Authorization: Bearer {{auth_token}}\n\n## Test Data\n- Test User ID: {{test_user_id}} = user123\n- Valid Points Amount: {{test_points_valid}} = 50.00\n\n## Scenarios Overview\n1. Happy Path: Puan kazanma ve kullanma akışı\n2. Error Scenario: Yetersiz puan hatası\n3. Validation Scenario: Geçersiz input kontrolleri\n\n## Version\n- API Version: v1.0.0\n- Collection Version: 1.0.0\n- Last Updated: 2024-12-11",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0 - Setup & Health Check",
+      "item": [
+        {
+          "name": "0.1 - GET Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Response time validation",
+                  "pm.test(\"Response time is less than 500ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});",
+                  "",
+                  "// Response body validation",
+                  "pm.test(\"Service is running\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"running\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "health"]
+            },
+            "description": "## Purpose\nHealth check endpoint to verify user points service is running.\n\n## Expected Behavior\n- Status Code: 200\n- Response: \"User points service is running\""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1 - Happy Path: Complete Points Flow",
+      "item": [
+        {
+          "name": "1.1 - GET User Points [New User - Zero Points]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Response structure validation",
+                  "pm.test(\"Response has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('userId');",
+                  "    pm.expect(jsonData).to.have.property('totalPoints');",
+                  "    pm.expect(jsonData).to.have.property('availablePoints');",
+                  "    pm.expect(jsonData).to.have.property('lockedPoints');",
+                  "});",
+                  "",
+                  "// New user should have zero points",
+                  "pm.test(\"New user has zero points\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalPoints).to.eql(0);",
+                  "    pm.expect(jsonData.availablePoints).to.eql(0);",
+                  "    pm.expect(jsonData.lockedPoints).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/{{test_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "{{test_user_id}}"]
+            },
+            "description": "## Purpose\nQuery points for a new user. Should create a new record with zero points.\n\n## Expected Behavior\n- Status Code: 200\n- totalPoints: 0.00\n- availablePoints: 0.00\n- lockedPoints: 0.00\n\n## Dependencies\n- None (first step in scenario)"
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 - POST Earn Points [Success - 50 Points]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// Points earned successfully",
+                  "pm.test(\"Points earned successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalPoints).to.eql(50);",
+                  "    pm.expect(jsonData.availablePoints).to.eql(50);",
+                  "});",
+                  "",
+                  "// Save points for next step",
+                  "pm.collectionVariables.set(\"current_points\", jsonData.availablePoints);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{test_user_id}}\",\n  \"points\": 50.00,\n  \"reason\": \"Payment completed successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/earn",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "earn"]
+            },
+            "description": "## Purpose\nEarn 50 points after a successful payment.\n\n## Expected Behavior\n- Status Code: 201\n- totalPoints: 50.00\n- availablePoints: 50.00\n\n## Test Data\n- userId: {{test_user_id}}\n- points: 50.00\n\n## Dependencies\n- Requires: 1.1 - User must exist"
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 - GET User Points [Verify 50 Points]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Verify points balance",
+                  "pm.test(\"User has 50 points\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalPoints).to.eql(50);",
+                  "    pm.expect(jsonData.availablePoints).to.eql(50);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/{{test_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "{{test_user_id}}"]
+            },
+            "description": "## Purpose\nVerify that points were earned successfully.\n\n## Expected Behavior\n- Status Code: 200\n- totalPoints: 50.00\n- availablePoints: 50.00\n\n## Dependencies\n- Requires: 1.2 - Earn Points"
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 - POST Spend Points [Success - 20 Points]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Points spent successfully",
+                  "pm.test(\"Points spent successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalPoints).to.eql(50); // Total never decreases",
+                  "    pm.expect(jsonData.availablePoints).to.eql(30); // 50 - 20 = 30",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{test_user_id}}\",\n  \"points\": 20.00,\n  \"reason\": \"Used in payment\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/spend",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "spend"]
+            },
+            "description": "## Purpose\nSpend 20 points during a payment.\n\n## Expected Behavior\n- Status Code: 200\n- totalPoints: 50.00 (never decreases)\n- availablePoints: 30.00 (50 - 20)\n\n## Test Data\n- userId: {{test_user_id}}\n- points: 20.00\n\n## Dependencies\n- Requires: 1.2 - User must have at least 20 points"
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 - GET User Points [Verify 30 Remaining]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Verify final balance",
+                  "pm.test(\"User has 30 available points\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalPoints).to.eql(50);",
+                  "    pm.expect(jsonData.availablePoints).to.eql(30);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/{{test_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "{{test_user_id}}"]
+            },
+            "description": "## Purpose\nVerify final points balance after spending.\n\n## Expected Behavior\n- Status Code: 200\n- totalPoints: 50.00\n- availablePoints: 30.00\n\n## Dependencies\n- Requires: 1.4 - Spend Points"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2 - Error Scenario: Insufficient Points",
+      "item": [
+        {
+          "name": "2.1 - GET Current Balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Save current balance",
+                  "pm.test(\"Save current balance for next step\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"available_points\", jsonData.availablePoints);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/{{test_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "{{test_user_id}}"]
+            },
+            "description": "## Purpose\nGet current balance to test insufficient points scenario."
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 - POST Spend Points [Fail: Insufficient]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Should fail with 400",
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Error response structure",
+                  "pm.test(\"Error response has correct structure\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('title');",
+                  "    pm.expect(jsonData).to.have.property('detail');",
+                  "    pm.expect(jsonData.title).to.include('Insufficient');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{test_user_id}}\",\n  \"points\": 1000.00,\n  \"reason\": \"Attempting to spend more than available\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/spend",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "spend"]
+            },
+            "description": "## Purpose\nAttempt to spend more points than available.\n\n## Expected Behavior\n- Status Code: 400\n- Error Title: \"Insufficient Points\"\n- Error Detail: Contains available vs requested amounts\n\n## Test Data\n- points: 1000.00 (more than user has)\n\n## Dependencies\n- Requires: 2.1 - Get current balance"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 - Validation Scenario: Invalid Input",
+      "item": [
+        {
+          "name": "3.1 - POST Earn Points [Fail: Negative Amount]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Should fail with 400",
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validation error",
+                  "pm.test(\"Validation error for negative points\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.title).to.include('Validation');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{test_user_id}}\",\n  \"points\": -10.00,\n  \"reason\": \"Invalid negative amount\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/earn",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "earn"]
+            },
+            "description": "## Purpose\nValidate that negative points are rejected.\n\n## Expected Behavior\n- Status Code: 400\n- Error Title: \"Validation Error\"\n- Error Message: Points must be positive\n\n## Test Data\n- points: -10.00 (invalid)"
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 - POST Spend Points [Fail: Zero Amount]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Should fail with 400",
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validation error",
+                  "pm.test(\"Validation error for zero points\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.title).to.include('Validation');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{test_user_id}}\",\n  \"points\": 0.00,\n  \"reason\": \"Invalid zero amount\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/spend",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "spend"]
+            },
+            "description": "## Purpose\nValidate that zero points are rejected.\n\n## Expected Behavior\n- Status Code: 400\n- Error Title: \"Validation Error\"\n- Error Message: Points must be greater than 0\n\n## Test Data\n- points: 0.00 (invalid)"
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 - POST Earn Points [Fail: Missing User ID]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Should fail with 400",
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validation error for missing field",
+                  "pm.test(\"Validation error for missing userId\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.title).to.include('Validation');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"points\": 50.00,\n  \"reason\": \"Missing userId field\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/earn",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "earn"]
+            },
+            "description": "## Purpose\nValidate that userId is required.\n\n## Expected Behavior\n- Status Code: 400\n- Error Title: \"Validation Error\"\n- Error Message: User ID is required"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4 - Points Check Scenario",
+      "item": [
+        {
+          "name": "4.1 - GET Check Points [Has Enough]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// User has enough points",
+                  "pm.test(\"User has enough points\", function () {",
+                  "    var hasEnough = pm.response.json();",
+                  "    pm.expect(hasEnough).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/{{test_user_id}}/check/10.00",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "{{test_user_id}}", "check", "10.00"]
+            },
+            "description": "## Purpose\nCheck if user has enough points (should return true).\n\n## Expected Behavior\n- Status Code: 200\n- Response: true\n\n## Test Data\n- Required Points: 10.00 (user should have more than this)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 - GET Check Points [Not Enough]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code validation",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// User doesn't have enough points",
+                  "pm.test(\"User doesn't have enough points\", function () {",
+                  "    var hasEnough = pm.response.json();",
+                  "    pm.expect(hasEnough).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/user-points/{{test_user_id}}/check/10000.00",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "user-points", "{{test_user_id}}", "check", "10000.00"]
+            },
+            "description": "## Purpose\nCheck if user has enough points (should return false).\n\n## Expected Behavior\n- Status Code: 200\n- Response: false\n\n## Test Data\n- Required Points: 10000.00 (user should have less than this)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "test_user_id",
+      "value": "user123",
+      "type": "string"
+    },
+    {
+      "key": "test_points_valid",
+      "value": "50.00",
+      "type": "string"
+    },
+    {
+      "key": "current_points",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "available_points",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

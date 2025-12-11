@@ -23,7 +23,8 @@ Production-ready payment system with **Craftgate** integration, built with **DDD
 
 ### Backend (Spring Boot)
 - ✅ **DDD Architecture** - Clean separation of concerns
-- ✅ **Craftgate Integration** - Turkish payment gateway
+- ✅ **Multi-Gateway Support** - Akbank POS & Craftgate integration
+- ✅ **User Points System** - Loyalty points management
 - ✅ **Idempotency** - Duplicate payment prevention
 - ✅ **PCI-DSS Compliant** - Secure card handling
 - ✅ **BigDecimal** - No floating-point errors
@@ -112,7 +113,9 @@ Frontend will start on `http://localhost:3000`
 
 ## 📡 API Documentation
 
-### Create Payment
+### Payment API
+
+#### Create Payment
 
 ```bash
 POST /api/v1/payments
@@ -164,6 +167,62 @@ Idempotency-Key: unique-key-123
   "errorMessage": "Insufficient funds"
 }
 ```
+
+### User Points API
+
+#### Get User Points
+
+```bash
+GET /api/v1/user-points/{userId}
+```
+
+**Response:**
+```json
+{
+  "userId": "user123",
+  "totalPoints": 150.00,
+  "availablePoints": 120.00,
+  "lockedPoints": 30.00,
+  "createdAt": "2024-01-15T10:30:00",
+  "lastUpdated": "2024-01-20T14:45:00"
+}
+```
+
+#### Earn Points
+
+```bash
+POST /api/v1/user-points/earn
+Content-Type: application/json
+
+{
+  "userId": "user123",
+  "points": 50.00,
+  "reason": "Payment completed successfully"
+}
+```
+
+#### Spend Points
+
+```bash
+POST /api/v1/user-points/spend
+Content-Type: application/json
+
+{
+  "userId": "user123",
+  "points": 20.00,
+  "reason": "Used in payment"
+}
+```
+
+#### Check Points Availability
+
+```bash
+GET /api/v1/user-points/{userId}/check/{requiredPoints}
+```
+
+**Response:** `true` or `false`
+
+📚 **Detailed Documentation:** See [USER_POINTS_API.md](backend/USER_POINTS_API.md)
 
 ## 🔒 Security Rules
 
