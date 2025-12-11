@@ -116,6 +116,10 @@ export const paymentFormSchema = z.object({
     errorMap: () => ({ message: 'Please select a currency' }),
   }),
 
+  provider: z.enum(['CRAFTGATE', 'AKBANK'], {
+    errorMap: () => ({ message: 'Please select a payment provider' }),
+  }),
+
   buyerId: z
     .string()
     .min(1, 'Buyer ID is required')

@@ -15,12 +15,14 @@ import type { PaymentResponse } from '@/types/payment.types';
 interface PaymentFormProps {
   defaultAmount?: number;
   defaultCurrency?: Currency;
+  defaultProvider?: PaymentProvider;
   defaultBuyerId?: string;
 }
 
 export default function PaymentForm({ 
   defaultAmount = 100, 
   defaultCurrency = 'TRY',
+  defaultProvider = 'CRAFTGATE',
   defaultBuyerId = 'buyer-123' 
 }: PaymentFormProps) {
   const [paymentResult, setPaymentResult] = useState<PaymentResponse | null>(null);
@@ -37,6 +39,7 @@ export default function PaymentForm({
     defaultValues: {
       amount: defaultAmount,
       currency: defaultCurrency,
+      provider: defaultProvider,
       buyerId: defaultBuyerId,
       cardInfo: {
         cardHolderName: '',
@@ -68,6 +71,7 @@ export default function PaymentForm({
         conversationId,
         amount: data.amount,
         currency: data.currency,
+        provider: data.provider,
         buyerId: data.buyerId,
         cardInfo: {
           cardHolderName: data.cardInfo.cardHolderName.toUpperCase(),
@@ -152,6 +156,23 @@ export default function PaymentForm({
             required
             {...register('buyerId')}
           />
+
+          {/* Payment Provider */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Payment Provider <span className="text-red-500 ml-1">*</span>
+            </label>
+            <select
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              {...register('provider')}
+            >
+              <option value="CRAFTGATE">🏦 Craftgate</option>
+              <option value="AKBANK">🏦 Akbank Sanal POS</option>
+            </select>
+            {errors.provider && (
+              <p className="mt-1 text-sm text-red-600">{errors.provider.message}</p>
+            )}
+          </div>
 
           {/* Divider */}
           <div className="border-t border-gray-200 pt-6">

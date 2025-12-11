@@ -63,6 +63,11 @@ export default function PaymentResult({ payment, onNewPayment }: PaymentResultPr
               )}
 
               <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Provider:</span>
+                <span className="font-mono text-gray-900">{payment.provider}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Status:</span>
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                   ✓ {payment.status}
