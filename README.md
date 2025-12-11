@@ -224,6 +224,74 @@ GET /api/v1/user-points/{userId}/check/{requiredPoints}
 
 📚 **Detailed Documentation:** See [USER_POINTS_API.md](backend/USER_POINTS_API.md)
 
+## 🧪 Testing
+
+Backend includes comprehensive test coverage:
+- ✅ **Unit Tests (UT)**: Domain logic, business rules (95% coverage)
+- ✅ **Integration Tests (IT)**: Repository, database with TestContainers
+- ✅ **Functional Tests (FT)**: End-to-end API tests with real PostgreSQL
+
+### Running Tests
+
+```bash
+# Run all tests
+mvn clean test
+
+# Run specific test types
+mvn test -Dtest="*Test"   # Unit tests only
+mvn test -Dtest="*IT"     # Integration tests only
+mvn test -Dtest="*FT"     # Functional tests only
+
+# Run with coverage report
+mvn clean verify
+# Report: target/site/jacoco/index.html
+```
+
+### Test Examples
+
+**Domain Layer - Unit Test:**
+```java
+@Test
+@DisplayName("Should earn points successfully")
+void shouldEarnPointsSuccessfully() {
+    UserPoints userPoints = new UserPoints("user123");
+    userPoints.earnPoints(new BigDecimal("50.00"));
+    
+    assertThat(userPoints.getTotalPoints())
+        .isEqualByComparingTo(new BigDecimal("50.00"));
+}
+```
+
+**Infrastructure Layer - Integration Test with TestContainers:**
+```java
+@DataJpaTest
+@Testcontainers
+@DisplayName("JPA UserPoints Repository Integration Tests")
+class JpaUserPointsRepositoryIT {
+    @Container
+    static PostgreSQLContainer<?> postgres = 
+        new PostgreSQLContainer<>("postgres:14-alpine");
+    
+    // Tests with real database...
+}
+```
+
+**Interfaces Layer - Functional Test:**
+```java
+@Test
+@DisplayName("Should get user points successfully")
+void shouldGetUserPointsSuccessfully() {
+    given()
+    .when()
+        .get("/api/v1/user-points/user123")
+    .then()
+        .statusCode(200)
+        .body("userId", equalTo("user123"));
+}
+```
+
+📚 **Testing Rules:** See [.cursor/rules/06-backend-testing/RULE.mdc](.cursor/rules/06-backend-testing/RULE.mdc)
+
 ## 🔒 Security Rules
 
 ### ❌ NEVER DO THIS:
