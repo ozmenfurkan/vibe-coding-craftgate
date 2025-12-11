@@ -1,0 +1,577 @@
+{
+  "info": {
+    "name": "Shopify Webhook Integration API",
+    "_postman_id": "shopify-webhook-integration-2024",
+    "description": "# Shopify Webhook Integration Collection\n\n## Purpose\nThis collection tests Shopify webhook integration with Craftgate payment processing.\nShopify sends order webhooks → Backend processes payment via Craftgate → Response sent to Shopify.\n\n## Base URL\n- Production: https://api.production.com\n- Staging: https://api.staging.com\n- Local: http://localhost:8080\n\n## Authentication\nShopify webhooks use HMAC-SHA256 signature for authentication.\n- Header: X-Shopify-Hmac-SHA256\n- Algorithm: Base64(HMAC-SHA256(webhook_secret, request_body))\n\n## Test Data\n- Test Shop: dev-store.myshopify.com\n- Test Orders: See individual scenarios\n- Webhook Secret: Configure in .env file\n\n## Scenarios Overview\n1. **Setup**: Health check and configuration validation\n2. **Happy Path**: Successful order webhook → payment processed\n3. **Error Cases**: Various failure scenarios\n4. **Security Tests**: HMAC validation, unauthorized attempts\n\n## Version\n- API Version: v1.0.0\n- Collection Version: 1.0.0\n- Last Updated: 2024-12-12",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "api_version",
+      "value": "v1",
+      "type": "string"
+    },
+    {
+      "key": "test_shop_domain",
+      "value": "dev-store.myshopify.com",
+      "type": "string"
+    },
+    {
+      "key": "test_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_payment_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhook_hmac",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0 - Setup & Health Check",
+      "item": [
+        {
+          "name": "0.1 - Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is less than 500ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains success message\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"healthy\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "health"]
+            },
+            "description": "## Purpose\nHealth check endpoint to verify Shopify webhook service is running.\n\n## Expected Behavior\n- Status Code: 200\n- Response Time: < 500ms\n- Message: \"Shopify webhook endpoint is healthy\"\n\n## Dependencies\nNone - this is the first request to verify service availability."
+          },
+          "response": []
+        }
+      ],
+      "description": "Initial setup and health check requests"
+    },
+    {
+      "name": "1 - Happy Path: Order Created → Payment Success",
+      "item": [
+        {
+          "name": "1.1 - POST Order Webhook [Success]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is less than 3000ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});",
+                  "",
+                  "pm.test(\"Response indicates success\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Payment ID is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.paymentId).to.exist;",
+                  "    pm.collectionVariables.set(\"test_payment_id\", jsonData.paymentId);",
+                  "});",
+                  "",
+                  "pm.test(\"No sensitive data in response\", function () {",
+                  "    var responseText = pm.response.text();",
+                  "    // Should not contain full card number",
+                  "    pm.expect(responseText).to.not.match(/\\d{16}/);",
+                  "    // Should not contain CVV",
+                  "    pm.expect(responseText).to.not.match(/\\\"cvv\\\":\\\"\\d{3}/);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate test order ID",
+                  "pm.collectionVariables.set(\"test_order_id\", Date.now());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Shopify-Topic",
+                "value": "orders/create",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Shop-Domain",
+                "value": "{{test_shop_domain}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Hmac-SHA256",
+                "value": "PLACEHOLDER_HMAC_SIGNATURE",
+                "type": "text",
+                "description": "IMPORTANT: Replace with actual HMAC signature calculated from request body"
+              },
+              {
+                "key": "X-Shopify-API-Version",
+                "value": "2024-01",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{test_order_id}},\n  \"email\": \"customer@example.com\",\n  \"orderNumber\": \"#1001\",\n  \"totalPrice\": 150.00,\n  \"currency\": \"TRY\",\n  \"financialStatus\": \"pending\",\n  \"fulfillmentStatus\": null,\n  \"customer\": {\n    \"id\": 12345,\n    \"email\": \"customer@example.com\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"phone\": \"+905551234567\"\n  },\n  \"lineItems\": [\n    {\n      \"id\": 1,\n      \"name\": \"Test Product\",\n      \"quantity\": 2,\n      \"price\": 75.00,\n      \"sku\": \"TEST-SKU-001\"\n    }\n  ],\n  \"paymentDetails\": {\n    \"creditCardBin\": \"540669\",\n    \"creditCardCompany\": \"Mastercard\",\n    \"creditCardNumber\": \"•••• •••• •••• 4242\",\n    \"creditCardExpMonth\": 12,\n    \"creditCardExpYear\": 2025,\n    \"creditCardName\": \"JOHN DOE\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "orders"]
+            },
+            "description": "## Purpose\nSimulates Shopify sending an \"orders/create\" webhook when a new order is placed.\nThe backend should process the order and initiate Craftgate payment.\n\n## Expected Behavior\n- Status Code: 200\n- Response Time: < 3000ms (includes payment gateway call)\n- Business Rule: Payment is created with PENDING status\n- Returns: Payment ID for tracking\n\n## Test Data\n- Order Amount: 150.00 TRY\n- Card BIN: 540669 (Garanti test card)\n- Expected: Payment processed successfully\n\n## IMPORTANT - HMAC Signature\nFor real testing, calculate HMAC-SHA256 signature:\n1. Take raw request body (JSON)\n2. Calculate HMAC-SHA256 using webhook secret\n3. Base64 encode the result\n4. Set as X-Shopify-Hmac-SHA256 header\n\n## Dependencies\nRequires: 0.1 - Health Check (to verify service is running)\nSets Variables: {{test_payment_id}}, {{test_order_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 - GET Verify Payment Status [Success]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Payment status is SUCCESS or PENDING\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(['SUCCESS', 'PENDING']).to.include(jsonData.data.status);",
+                  "});",
+                  "",
+                  "pm.test(\"Payment provider is CRAFTGATE\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.provider).to.eql('CRAFTGATE');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payments/{{test_payment_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payments", "{{test_payment_id}}"]
+            },
+            "description": "## Purpose\nVerifies that the payment created from Shopify webhook was successfully processed.\n\n## Expected Behavior\n- Status Code: 200\n- Payment Status: SUCCESS or PENDING\n- Provider: CRAFTGATE\n\n## Dependencies\nRequires: 1.1 - POST Order Webhook (sets {{test_payment_id}})"
+          },
+          "response": []
+        }
+      ],
+      "description": "Happy path scenario: Shopify order webhook → successful Craftgate payment"
+    },
+    {
+      "name": "2 - Error Case: Invalid HMAC Signature",
+      "item": [
+        {
+          "name": "2.1 - POST Order Webhook [Fail: Invalid HMAC]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is INVALID_SIGNATURE\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.errorCode).to.eql('INVALID_SIGNATURE');",
+                  "});",
+                  "",
+                  "pm.test(\"Success flag is false\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Shopify-Topic",
+                "value": "orders/create",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Shop-Domain",
+                "value": "{{test_shop_domain}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Hmac-SHA256",
+                "value": "INVALID_HMAC_SIGNATURE_FOR_TESTING",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 999999,\n  \"email\": \"attacker@example.com\",\n  \"orderNumber\": \"#FAKE\",\n  \"totalPrice\": 1.00,\n  \"currency\": \"TRY\",\n  \"financialStatus\": \"pending\",\n  \"customer\": {\n    \"id\": 1,\n    \"email\": \"attacker@example.com\",\n    \"firstName\": \"Fake\",\n    \"lastName\": \"Order\"\n  },\n  \"lineItems\": [],\n  \"paymentDetails\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "orders"]
+            },
+            "description": "## Purpose\nTests security validation: webhook with invalid HMAC signature should be rejected.\nThis simulates an attack attempt where someone tries to send fake webhooks.\n\n## Expected Behavior\n- Status Code: 401 Unauthorized\n- Error Code: INVALID_SIGNATURE\n- Business Rule: Payment should NOT be created\n\n## Security Validation\nThis test ensures HMAC validation is working correctly.\nWithout this validation, attackers could send fake orders."
+          },
+          "response": []
+        }
+      ],
+      "description": "Security test: Invalid HMAC signature should be rejected"
+    },
+    {
+      "name": "3 - Error Case: Missing Payment Details",
+      "item": [
+        {
+          "name": "3.1 - POST Order Webhook [Fail: No Payment Details]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 422 Unprocessable Entity\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is PAYMENT_DETAILS_MISSING\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.errorCode).to.eql('PAYMENT_DETAILS_MISSING');",
+                  "});",
+                  "",
+                  "pm.test(\"Success flag is false\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Shopify-Topic",
+                "value": "orders/create",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Shop-Domain",
+                "value": "{{test_shop_domain}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Hmac-SHA256",
+                "value": "PLACEHOLDER_VALID_HMAC",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 777777,\n  \"email\": \"customer@example.com\",\n  \"orderNumber\": \"#1002\",\n  \"totalPrice\": 100.00,\n  \"currency\": \"TRY\",\n  \"financialStatus\": \"pending\",\n  \"customer\": {\n    \"id\": 12345,\n    \"email\": \"customer@example.com\",\n    \"firstName\": \"Jane\",\n    \"lastName\": \"Doe\"\n  },\n  \"lineItems\": [\n    {\n      \"id\": 1,\n      \"name\": \"Test Product\",\n      \"quantity\": 1,\n      \"price\": 100.00\n    }\n  ],\n  \"paymentDetails\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "orders"]
+            },
+            "description": "## Purpose\nTests validation: order webhook without payment details should be rejected.\n\n## Expected Behavior\n- Status Code: 422 Unprocessable Entity\n- Error Code: PAYMENT_DETAILS_MISSING\n- Business Rule: Cannot process payment without card information\n\n## Note\nIn real Shopify webhooks, payment details might not be included.\nThis scenario tests the validation logic."
+          },
+          "response": []
+        }
+      ],
+      "description": "Validation test: Order without payment details"
+    },
+    {
+      "name": "4 - Error Case: Order Already Paid",
+      "item": [
+        {
+          "name": "4.1 - POST Order Webhook [Fail: Already Paid]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 422 Unprocessable Entity\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is ORDER_ALREADY_PAID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.errorCode).to.eql('ORDER_ALREADY_PAID');",
+                  "});",
+                  "",
+                  "pm.test(\"Success flag is false\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Shopify-Topic",
+                "value": "orders/create",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Shop-Domain",
+                "value": "{{test_shop_domain}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Hmac-SHA256",
+                "value": "PLACEHOLDER_VALID_HMAC",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 888888,\n  \"email\": \"customer@example.com\",\n  \"orderNumber\": \"#1003\",\n  \"totalPrice\": 200.00,\n  \"currency\": \"TRY\",\n  \"financialStatus\": \"paid\",\n  \"customer\": {\n    \"id\": 12345,\n    \"email\": \"customer@example.com\",\n    \"firstName\": \"Already\",\n    \"lastName\": \"Paid\"\n  },\n  \"lineItems\": [\n    {\n      \"id\": 1,\n      \"name\": \"Test Product\",\n      \"quantity\": 1,\n      \"price\": 200.00\n    }\n  ],\n  \"paymentDetails\": {\n    \"creditCardBin\": \"540669\",\n    \"creditCardCompany\": \"Mastercard\",\n    \"creditCardNumber\": \"•••• •••• •••• 4242\",\n    \"creditCardExpMonth\": 12,\n    \"creditCardExpYear\": 2025,\n    \"creditCardName\": \"ALREADY PAID\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "orders"]
+            },
+            "description": "## Purpose\nTests duplicate payment prevention: order already marked as paid should not be processed again.\n\n## Expected Behavior\n- Status Code: 422 Unprocessable Entity\n- Error Code: ORDER_ALREADY_PAID\n- Business Rule: Prevent duplicate payment processing\n\n## Use Case\nShopify might send multiple webhooks for the same order.\nThis validation prevents charging the customer twice."
+          },
+          "response": []
+        }
+      ],
+      "description": "Business logic test: Prevent duplicate payment for already paid orders"
+    },
+    {
+      "name": "5 - Alternative Flow: Orders Paid Webhook",
+      "item": [
+        {
+          "name": "5.1 - POST Orders Paid Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Notification acknowledged\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Shopify-Topic",
+                "value": "orders/paid",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Shop-Domain",
+                "value": "{{test_shop_domain}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Hmac-SHA256",
+                "value": "PLACEHOLDER_VALID_HMAC",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{test_order_id}},\n  \"email\": \"customer@example.com\",\n  \"orderNumber\": \"#1001\",\n  \"totalPrice\": 150.00,\n  \"currency\": \"TRY\",\n  \"financialStatus\": \"paid\",\n  \"customer\": {\n    \"id\": 12345,\n    \"email\": \"customer@example.com\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/orders/paid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "orders", "paid"]
+            },
+            "description": "## Purpose\nShopify sends \"orders/paid\" webhook when payment is confirmed.\nThis endpoint acknowledges the notification (future enhancement for payment status update).\n\n## Expected Behavior\n- Status Code: 200\n- Notification acknowledged\n\n## Future Enhancements\n- Update payment status in database\n- Send customer notification\n- Generate invoice"
+          },
+          "response": []
+        }
+      ],
+      "description": "Alternative webhook: Orders paid notification"
+    },
+    {
+      "name": "6 - Alternative Flow: Orders Cancelled Webhook",
+      "item": [
+        {
+          "name": "6.1 - POST Orders Cancelled Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Notification acknowledged\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Shopify-Topic",
+                "value": "orders/cancelled",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Shop-Domain",
+                "value": "{{test_shop_domain}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Shopify-Hmac-SHA256",
+                "value": "PLACEHOLDER_VALID_HMAC",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 666666,\n  \"email\": \"customer@example.com\",\n  \"orderNumber\": \"#1004\",\n  \"totalPrice\": 300.00,\n  \"currency\": \"TRY\",\n  \"financialStatus\": \"refunded\",\n  \"customer\": {\n    \"id\": 12345,\n    \"email\": \"customer@example.com\",\n    \"firstName\": \"Cancelled\",\n    \"lastName\": \"Order\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/webhooks/shopify/orders/cancelled",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "webhooks", "shopify", "orders", "cancelled"]
+            },
+            "description": "## Purpose\nShopify sends \"orders/cancelled\" webhook when order is cancelled.\nThis endpoint acknowledges the notification (future enhancement for refund processing).\n\n## Expected Behavior\n- Status Code: 200\n- Notification acknowledged\n\n## Future Enhancements\n- Process refund via Craftgate\n- Update inventory\n- Send customer notification"
+          },
+          "response": []
+        }
+      ],
+      "description": "Alternative webhook: Orders cancelled notification"
+    }
+  ]
+}
