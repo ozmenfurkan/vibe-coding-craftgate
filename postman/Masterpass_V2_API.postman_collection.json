@@ -1,0 +1,378 @@
+{
+	"info": {
+		"_postman_id": "masterpass-v2-collection",
+		"name": "Masterpass V2 Payment API",
+		"description": "# Masterpass V2 Entegrasyonu\n\n**Confluence Doküman:** Masterpass Integration\n\n## Özellikler\n- ✅ V2 Server-side entegrasyonu (Craftgate üzerinden)\n- ✅ Non-3DS (OTP) akışı\n- ✅ 3DS Secure akışı\n- ✅ Scenario-based collection yapısı\n\n## Test Bilgileri\n**Sandbox OTP:** 123456 (tüm doğrulamalar için)\n**VPN:** Sandbox için gerekli\n**Test Kartları:** Her bankanın test POS'u ile eşleşmeli\n\n## IP Whitelist (Production)\n- 185.188.37.1\n- 212.2.217.54\n- 195.33.224.194\n\n## Versiyon\n- API Version: v1.0.0\n- Collection Version: 1.0.0\n- Son Güncelleme: 2024-12-11",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "api_version",
+			"value": "/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "test_msisdn",
+			"value": "905436636070",
+			"type": "string"
+		},
+		{
+			"key": "test_user_id",
+			"value": "CG_905436636070",
+			"type": "string"
+		},
+		{
+			"key": "test_bin_garanti",
+			"value": "540669",
+			"type": "string"
+		},
+		{
+			"key": "test_bin_ykb",
+			"value": "404809",
+			"type": "string"
+		},
+		{
+			"key": "masterpass_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "masterpass_reference_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "0 - Setup & Health Check",
+			"item": [
+				{
+					"name": "0.1 - Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "health"]
+						},
+						"description": "## Purpose\nBackend servisinin ayakta olduğunu kontrol eder.\n\n## Expected Behavior\n- Status Code: 200\n- Response Time: < 100ms\n\n## Test Data\nN/A"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response time is less than 100ms\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(100);",
+									"});",
+									"",
+									"pm.test(\"Health status is UP\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			],
+			"description": "Sistem sağlık kontrolü ve başlangıç testleri"
+		},
+		{
+			"name": "1 - Happy Path: Masterpass Non-3DS (OTP) Flow",
+			"item": [
+				{
+					"name": "1.1 - Generate Masterpass Token [Success]",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"msisdn\": \"{{test_msisdn}}\",\n  \"userId\": \"{{test_user_id}}\",\n  \"binNumber\": \"{{test_bin_garanti}}\",\n  \"amount\": 100.00,\n  \"currency\": \"TRY\",\n  \"installment\": 1,\n  \"conversationId\": \"MP-{{$randomUUID}}\",\n  \"buyerId\": \"buyer-123\",\n  \"forceThreeDS\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_version}}/masterpass/generate-token",
+							"host": ["{{base_url}}{{api_version}}"],
+							"path": ["masterpass", "generate-token"]
+						},
+						"description": "## Purpose\nMasterpass ödeme token'ı oluşturur (Craftgate üzerinden)\n\n## Expected Behavior\n- Status Code: 200\n- Response içinde: token, referenceId, orderNo, terminalGroupId\n- Token client-side MFS.purchase()'a gönderilecek\n\n## Test Data\n- msisdn: {{test_msisdn}}\n- binNumber: {{test_bin_garanti}} (Garanti test kartı)\n\n## Dependencies\nYok\n\n## Sets Variables\n- {{masterpass_token}}\n- {{masterpass_reference_id}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"    pm.expect(jsonData).to.have.property('referenceId');",
+									"    pm.expect(jsonData).to.have.property('orderNo');",
+									"    pm.expect(jsonData).to.have.property('terminalGroupId');",
+									"});",
+									"",
+									"pm.test(\"Save token and referenceId\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('masterpass_token', jsonData.token);",
+									"    pm.collectionVariables.set('masterpass_reference_id', jsonData.referenceId);",
+									"});",
+									"",
+									"// Security: Ensure no PII in response",
+									"pm.test(\"Response does not contain MSISDN\", function () {",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.not.include(pm.collectionVariables.get('test_msisdn'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "1.2 - Complete Masterpass Payment (After OTP) [Success]",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"referenceId\": \"{{masterpass_reference_id}}\",\n  \"conversationId\": \"MP-TEST-001\",\n  \"token\": \"{{masterpass_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_version}}/masterpass/complete",
+							"host": ["{{base_url}}{{api_version}}"],
+							"path": ["masterpass", "complete"]
+						},
+						"description": "## Purpose\nMasterpass ödemesini tamamlar (OTP doğrulama sonrası)\n\n## Expected Behavior\n- Status Code: 200\n- Payment status: SUCCESS\n- externalPaymentId: Craftgate payment ID\n\n## Test Data\n- referenceId: {{masterpass_reference_id}}\n- token: OTP sonrası yeni token (test: original token)\n\n## Dependencies\n- Requires: 1.1 - Generate Token\n\n## Sets Variables\n- {{payment_id}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Payment is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('SUCCESS');",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('externalPaymentId');",
+									"});",
+									"",
+									"pm.test(\"Save payment ID\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('payment_id', jsonData.id);",
+									"});",
+									"",
+									"pm.test(\"Provider is MASTERPASS\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.provider).to.eql('MASTERPASS');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "1.3 - Get Payment Status [Success]",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}{{api_version}}/payments/{{payment_id}}",
+							"host": ["{{base_url}}{{api_version}}"],
+							"path": ["payments", "{{payment_id}}"]
+						},
+						"description": "## Purpose\nÖdeme durumunu sorgular\n\n## Expected Behavior\n- Status Code: 200\n- Payment status: SUCCESS\n\n## Dependencies\n- Requires: 1.2 - Complete Payment"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Payment exists and is successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('payment_id'));",
+									"    pm.expect(jsonData.status).to.eql('SUCCESS');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			],
+			"description": "Masterpass Non-3DS (OTP) akışı - Başarılı senaryo\n\nFlow:\n1. Token oluştur\n2. Client: MFS.purchase() → responseCode 5001 (OTP)\n3. User: OTP girer (123456)\n4. Backend: Complete payment\n5. Ödeme başarılı"
+		},
+		{
+			"name": "2 - Alternative Flow: Masterpass with 3DS",
+			"item": [
+				{
+					"name": "2.1 - Generate Token (Force 3DS) [Success]",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"msisdn\": \"{{test_msisdn}}\",\n  \"userId\": \"{{test_user_id}}\",\n  \"binNumber\": \"{{test_bin_garanti}}\",\n  \"amount\": 250.00,\n  \"currency\": \"TRY\",\n  \"installment\": 1,\n  \"conversationId\": \"MP-3DS-{{$randomUUID}}\",\n  \"buyerId\": \"buyer-456\",\n  \"forceThreeDS\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_version}}/masterpass/generate-token",
+							"host": ["{{base_url}}{{api_version}}"],
+							"path": ["masterpass", "generate-token"]
+						},
+						"description": "## Purpose\n3DS zorunlu token oluşturur\n\n## Expected Behavior\n- Status Code: 200\n- forceThreeDS: true\n- MFS.purchase() responseCode 5010 dönecek\n\n## Test Data\n- amount: 250.00 (yüksek tutar → 3DS)\n- forceThreeDS: true"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Save 3DS token\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('masterpass_token', jsonData.token);",
+									"    pm.collectionVariables.set('masterpass_reference_id', jsonData.referenceId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			],
+			"description": "Masterpass 3DS akışı\n\nFlow:\n1. Token oluştur (forceThreeDS: true)\n2. Client: MFS.purchase() → responseCode 5010\n3. Backend: /3ds-init → returnUrl al\n4. User: Banka 3DS sayfasına yönlendirilir\n5. Backend: /3ds-complete\n6. Ödeme başarılı\n\n**NOT:** 3DS init/complete endpoint'leri ayrı implementasyon gerektirir"
+		},
+		{
+			"name": "10 - Error Scenarios",
+			"item": [
+				{
+					"name": "10.1 - Invalid MSISDN Format [Fail: Validation]",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"msisdn\": \"123456\",\n  \"userId\": \"{{test_user_id}}\",\n  \"binNumber\": \"{{test_bin_garanti}}\",\n  \"amount\": 100.00,\n  \"currency\": \"TRY\",\n  \"installment\": 1,\n  \"conversationId\": \"MP-ERR-001\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_version}}/masterpass/generate-token",
+							"host": ["{{base_url}}{{api_version}}"],
+							"path": ["masterpass", "generate-token"]
+						},
+						"description": "## Purpose\nGeçersiz MSISDN formatı testi\n\n## Expected Behavior\n- Status Code: 400\n- Error: Invalid Turkish mobile number format"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Validation error for MSISDN\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.message).to.include('msisdn');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "10.2 - Missing Required Fields [Fail: Validation]",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100.00,\n  \"currency\": \"TRY\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}{{api_version}}/masterpass/generate-token",
+							"host": ["{{base_url}}{{api_version}}"],
+							"path": ["masterpass", "generate-token"]
+						},
+						"description": "## Purpose\nZorunlu alanların eksik olması testi\n\n## Expected Behavior\n- Status Code: 400\n- Error: Missing required fields"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			],
+			"description": "Masterpass hata senaryoları\n\n- Validation errors\n- Invalid token\n- Payment failures"
+		}
+	]
+}
