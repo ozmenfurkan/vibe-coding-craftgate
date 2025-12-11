@@ -1,0 +1,16 @@
+---
+description: "Context for payment flows, API specifications, and business rules from documentation."
+globs: "docs/**/*"
+alwaysApply: false
+---
+
+# Documentation Context Strategy
+When the user asks about "Payment Flow", "3D Secure", or "Database Schema", refer to the files in the `docs/` folder.
+
+# Key References
+- **Payment Logic:** Refer to `docs/payment-flow.pdf` for the step-by-step state machine logic.
+- **API Contract:** Ensure implementation matches `docs/api-specs.md`.
+- **Database:** If modifying entities, check `docs/db-schema.md` (if exists) for consistency.
+
+# How to use PDFs
+If the requested information is inside a PDF (e.g., `payment-flow.pdf`), explicitly mention that you are reading from that file. If you cannot parse a specific section, ask the user to copy the relevant text.

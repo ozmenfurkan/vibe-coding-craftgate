@@ -1,0 +1,21 @@
+---
+description: "React, TypeScript, and TailwindCSS standards for frontend."
+globs: "frontend/**/*, **/*.tsx, **/*.ts"
+alwaysApply: false
+---
+
+# Tech Stack
+- React 18+, TypeScript
+- State: TanStack Query (Server), Zustand (Client)
+- Styling: TailwindCSS
+- Validation: Zod + React Hook Form
+
+# Component & Architecture
+- **Feature-Based Folders:** Group files by feature (e.g., `src/features/payment/`), not by type.
+- **Type Safety:** strict `no-explicit-any`. Define interfaces matching Backend DTOs.
+- **UI/UX:** Use loading skeletons for async operations.
+
+# Payment Specifics
+- **Input Masking:** Credit card inputs must use masking (spacing every 4 digits).
+- **Currency Display:** Use `Intl.NumberFormat` for displaying prices. Never manipulate strings manually.
+- **Validation:** Use `Zod` schemas to strictly validate card numbers (Luhn algorithm if possible) before sending to backend.

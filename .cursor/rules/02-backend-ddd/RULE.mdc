@@ -1,0 +1,31 @@
+---
+description: "Spring Boot, Java, and Domain-Driven Design (DDD) rules for backend development."
+globs: "backend/**/*, **/*.java, **/pom.xml"
+alwaysApply: false
+---
+
+# Tech Stack & Architecture
+- **Framework:** Spring Boot 3.x, Java 17+
+- **Database:** PostgreSQL
+- **Architecture:** Hexagonal / Clean Architecture (DDD)
+
+# DDD Layer Rules (Strict Enforcement)
+1.  **Domain Layer:**
+    - Pure Java. NO Spring annotations (like `@Service`, `@Autowired`).
+    - Contains Entities, Value Objects, and Repository Interfaces.
+    - Business logic lives HERE, not in services.
+2.  **Application Layer:**
+    - Orchestrates use cases.
+    - Handles `@Transactional`.
+    - Converts DTOs <-> Domain Objects.
+3.  **Infrastructure Layer:**
+    - Implements Repository Interfaces (JPA/Hibernate).
+    - External API calls (Payment Gateways).
+4.  **Interface (API) Layer:**
+    - REST Controllers.
+    - Only accepts/returns DTOs.
+
+# Coding Standards
+- **Idempotency:** Payment endpoints MUST check for `Idempotency-Key` header.
+- **Error Handling:** Use global `@ControllerAdvice`. Return structured `ProblemDetails`.
+- **Lombok:** Use `@Data` sparingly. Prefer `@Getter`, `@Setter`, `@Builder`.

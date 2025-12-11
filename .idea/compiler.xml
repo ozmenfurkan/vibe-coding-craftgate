@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="payment-application" />
+        <module name="payment-domain" />
+        <module name="payment-infrastructure" />
+        <module name="payment-interfaces" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="payment-application" options="-parameters" />
+      <module name="payment-domain" options="-parameters" />
+      <module name="payment-infrastructure" options="-parameters" />
+      <module name="payment-interfaces" options="-parameters" />
+      <module name="payment-service" options="" />
+    </option>
+  </component>
+</project>
